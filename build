@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+# builing Yenber from Linux
+
+clang++ -static -INeum/libs -INeum/server/ Yserver/main.cpp -o _server
+clang++ -static-libstdc++  -INeum/libs -INeum/client/ Yclient/main.cpp -o _client
