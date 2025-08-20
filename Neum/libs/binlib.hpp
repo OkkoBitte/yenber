@@ -4,7 +4,7 @@
 #define VERSION_NAME_SERVER "0.1.1-release[stable]"
 #define VERSION_NAME_CLIENT "0.1.1-release[stable]"
 
-
+#define DESCRIBE_VERSION_YENBER "0.1.0-debuge[inDev]"
 
 #define STATUS_SYSTEM_OPERATION_ERROR -1
 #define STATUS_OPERATION_OK 0
@@ -19,7 +19,7 @@ uint8_t mazor_code = 0x01;
 
 
 const std::string help1_server = "|[Neum:V][HELP] server config.krr   \n\n\tfor get more data --describe\n\tfor get help --help\n";
-std::string help2_server = "|[Neum:V][DESCRIBE] \n\n\tVersion Code "+std::to_string(VERSION_CODE)+"\n\tVersion Name"+VERSION_NAME_SERVER+"\n\n More web-mbg.ru\n\n";
+std::string help2_server = "|[Neum:V][DESCRIBE] \n\n\tVersion Code "+std::to_string(VERSION_CODE)+"\n\tVersion Name "+VERSION_NAME_SERVER+"\n\t Yenber "+DESCRIBE_VERSION_YENBER+"\n\n More web-mbg.ru\n\n";
 
 template <typename G>
 void hxout_struct(G gdata){

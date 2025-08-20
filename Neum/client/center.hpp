@@ -17,8 +17,15 @@ public:
         phead.timeout[0] = 0x0A;
         phead.datasize[0] = static_cast<uint8_t>(data_size & 0xFF);
         phead.datasize[1] = static_cast<uint8_t>((data_size >> 8) & 0xFF);
-        std::lock_guard<std::mutex> lock(pmut);
-        pmanager.postMy(phead, data);
+        std::unique_lock<std::mutex> lock(pmut);
+    
+        while (!pmanager.postMy(phead, data)) {
+            lock.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            lock.lock(); 
+        }
+        
+        
     }
     void loop();
     client_configure& config;

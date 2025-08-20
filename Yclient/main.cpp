@@ -94,7 +94,7 @@ void getFile(uint64_t chunk_num, uint64_t chunks_total, std::vector<uint8_t> dat
             
             const uint64_t total_chunks = (total_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
             uint64_t current_chunk = 0;
-
+            int last_chunk = 0;
             while (file && current_chunk < total_chunks) {
                 const auto remaining = total_size - file.tellg();
                 const auto chunk_size = std::min(CHUNK_SIZE, static_cast<size_t>(remaining));
@@ -127,8 +127,10 @@ void getFile(uint64_t chunk_num, uint64_t chunks_total, std::vector<uint8_t> dat
 
                 packet.insert(packet.end(), chunk.begin(), chunk.end());
                 
-                cm.sendData(std::move(packet));
+
+ 
                 
+                cm.sendData(std::move(packet));
                 int percent = 0;
                 if (total_chunks > 0) {
                     percent = (100 * current_chunk) / total_chunks;
@@ -140,10 +142,7 @@ void getFile(uint64_t chunk_num, uint64_t chunks_total, std::vector<uint8_t> dat
                         << " chunks (" << percent << "%)";
             
              
-                if ((current_chunk % 5) == 0) {
-                    int delay_ms = (total_chunks > 1000) ? 1000 : 100;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-                }
+           
             }
             
             std::cout << "\nFile transfer complete: " << filename << std::endl;

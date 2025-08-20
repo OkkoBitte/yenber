@@ -153,24 +153,30 @@ namespace PacketController{
         
         std::vector<packetActions> actions;
 
-        void isOk() {
+        bool isOk(bool fatal) {
             const size_t maxElements = 1000; 
-            const size_t maxBytes =  10 * 1024 * 1024; 
+            const size_t maxBytes = 10 * 1024 * 1024;
+            size_t totalBytes = isMy.size() * sizeof(packContoll) + actions.size() * sizeof(packetActions);
 
-            size_t totalBytes = isMy.size() * sizeof(packContoll) + 
-                                actions.size() * sizeof(packetActions);
+            bool isOverLimit = (isMy.size() > (fatal ? maxElements : maxElements / 2)  || actions.size() > maxElements || totalBytes > (fatal ? maxBytes : maxBytes/2));
 
-            if (isMy.size() > maxElements || actions.size() > maxElements || totalBytes > maxBytes) {
-                isMy.clear();
-                actions.clear();
-                actions.push_back(packetActions({action_e::close_client, {}}));
-                log::err("Memory limit exceeded"); 
+            if (fatal) {
+                if (isOverLimit) {
+                    isMy.clear();
+                    actions.clear();
+                    actions.push_back(packetActions({action_e::close_client, {}}));
+                    log::err("\nMemory limit exceeded");
+                    return false;
+                }
+                return true;
+            } else {
+                return !isOverLimit; 
             }
         }
         public:
             std::optional<server_configure> sconf;
             void postHe(packet_s &packet, std::vector<uint8_t> &data){
-                isOk();
+                isOk(true);
                 if (*packet.type == packet_type::menegmend) { // [ACK]
                     isMy.erase(
                         std::remove_if(
@@ -220,8 +226,8 @@ namespace PacketController{
                 } 
 
             };
-            void postMy(packet_s &packet, std::vector<uint8_t> &data){
-                isOk();
+            bool postMy(packet_s &packet, std::vector<uint8_t> &data){
+                if (!isOk(false)) return false;
                 packetActions pactoin;
                 pactoin.action = action_e::send_data;
 
@@ -233,6 +239,7 @@ namespace PacketController{
                 pactoin.packet = newPcoll;
                 isMy.push_back(newPcoll);
                 actions.push_back(pactoin);
+                return true;
             };
 
             void sendInfoClose(uint8_t why){
