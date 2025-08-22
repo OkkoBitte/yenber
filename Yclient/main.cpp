@@ -4,12 +4,26 @@
 struct type_y {
     static const inline uint8_t text_t = 0x01;
     static const inline uint8_t file_t = 0x02;
+    static const inline uint8_t shll_t = 0x03;
 };
 
 enum type_f {
     download,
     upload 
 };
+enum typeACML{
+    nullCML, clearCML, exitCML, messageCML, fileCML, shellCML
+};
+struct actionsCml{
+    typeACML action_type = {typeACML::nullCML}; // type
+    std::string arg1 = {}; // to who?
+    std::string arg2 = {}; // reserv data
+    std::string arg3 = {}; // reserv data
+
+
+};
+
+
 
 namespace fs = std::filesystem;
 
@@ -160,12 +174,12 @@ void getFile(uint64_t chunk_num, uint64_t chunks_total, std::vector<uint8_t> dat
 
 class myApp : public clientManager {
 public:
-    myApp(client_configure& conf) : 
-        clientManager(conf), 
+    myApp(yClientConfigController::retConf& conf) : 
+        clientManager(conf.cc), 
         host(std::make_unique<hostManager>(static_cast<clientManager*>(this))), 
-        confucen(conf) {
+        confucen(conf.cc) {
         
-        
+        setvar = conf.all_var;
         std::cout << "|[SEY][" << cyan << std::string(confucen.sey.sey_main, 20) << reset << "]" << std::endl;
     }
 
@@ -181,18 +195,33 @@ public:
             std::string fulltext;
             std::getline(std::cin, fulltext);
             
-            auto words = splitIntoWords(fulltext);
+            std::vector<std::string> words;
+            words = splitIntoWords(fulltext);
             if(words.empty()) continue;
             
-            if(words[0] == "|exit") {
-                closeConnection();
-                break;
+            actionsCml action;
+            std::string firecode = words[0];
+            //parse
+          
+            if(spec_code.find(firecode) == spec_code.end()){
+                std::unique_lock<std::mutex> lock(mutexmy);
+                if (setvar.find(firecode)!= setvar.end()){
+                    std::vector<std::string> nwords = splitIntoWords(setvar.find(firecode)->second);
+                    firecode = nwords[0];
+                    for(size_t i = 1; i < nwords.size(); ++i){
+                        words.insert(words.begin()+i,nwords[i]);
+                    }
+                }
             }
-            if(words[0] == "|clear") {
-                std::system("clear");
+            if(firecode== "|exit") {
+                action.action_type = typeACML::exitCML;
             }
-            else if(words[0] == "|msg") {
+            if(firecode == "|clear") {
+                action.action_type = typeACML::clearCML;
+            }
+            else if(firecode == "|msg") {
                 if(words.size() > 1) {
+                    
                     if(words[1].size() != 20) {
                         std::cout << "Invalid recipient sey (must be 20 bytes)" << std::endl;
                         continue;
@@ -203,17 +232,12 @@ public:
                         if(i > 2) message_text += " ";
                         message_text += words[i];
                     }
-                    
-                    std::vector<uint8_t> data;
-                    data.insert(data.end(), words[1].begin(), words[1].end());
-                    data.push_back(type_y::text_t);
-                    data.insert(data.end(), message_text.begin(), message_text.end());
-                    
-                    sendData(data);
-                
+                    action.action_type = typeACML::messageCML;
+                    action.arg1 = words[1];
+                    action.arg2 = message_text;
                 }
             }
-            else if(words[0] == "|file") {
+            else if(firecode == "|file") {
                 if(words.size() < 3) {
                     std::cout << "Usage: file <recipient_sey> <filepath>" << std::endl;
                     continue;
@@ -234,17 +258,48 @@ public:
                     std::cout << "File not found: " << filepath << std::endl;
                     continue;
                 }
-                std::cout<< "File '"<<filepath<<"' is exists!"<<std::endl;
-                fileManager fm = fileManager(filepath,type_f::upload);
-                
-                fm.sendFile(words[1],*this, filepath);
+                std::cout<< "File "<<filepath<<" is exists!"<<std::endl;
+
+                action.action_type = typeACML::fileCML;
+                action.arg1 = words[1];
+                action.arg2 = filepath;
                 
   
             }
-            else {
-                std::cout << "\n\nUnknown command: " << words[0] << std::endl;
-                std::cout << "Available commands:\n\t|msg <sey> <text> -- send text\n\t|file <sey> <path> -- send file\n\t|exit -- quit\n\t|clear -- clear chat\n\n";
+            else if(firecode == "|shell"){
+                if(words[1].size() != 20) {
+                    std::cout << "Invalid recipient sey (must be 20 bytes)" << std::endl;
+                    continue;
+                }
+                
+                std::string full_code;
+                for(size_t i = 2; i < words.size(); ++i) {
+                    if(i > 2) full_code += " ";
+                    full_code += words[i];
+                }
+                action.action_type = typeACML::shellCML;
+                action.arg1 = words[1];
+                action.arg2 = full_code;
             }
+            else if(firecode == "|set"){
+                if(words[1].size() >= 1 && words[2].size() >= 1){
+                    std::string fullwr;
+                    for(size_t i = 2; i < words.size(); ++i) {
+                        if(i > 2) fullwr += " ";
+                        fullwr += words[i];
+                    }
+
+                    setvar[words[1]] = fullwr;
+                    
+                }
+                else std::cout<<"Err for set"<<std::endl;
+            }
+            else {
+                std::cout << "\n\nUnknown command: " << firecode << std::endl;
+                std::cout << "Available commands:\n\t|msg <sey> <text> -- send text\n\t|file <sey> <path> -- send file\n\t|exit -- quit\n\t|clear -- clear chat\n\t|set <link> <text> -- variables\n\n";
+            }
+            
+            cmlActivate(action);
         }
 
     }
@@ -263,7 +318,11 @@ public:
             return;
         }
         else if(data_type == type_y::file_t) {
-        
+            std::unique_lock<std::mutex> lock(mutexmy);
+            if (setvar.find("getFile")!= setvar.end()){
+                if(setvar.find("getFile")->second != "1") return;
+            }
+            lock.unlock();
             if(data.size() < 40) { 
                 std::cerr << "Invalid file packet (too small)" << std::endl;
                 return;
@@ -315,10 +374,21 @@ public:
                 downloads.erase(filename);
             }
         }
+        else if(data_type == type_y::shll_t){
+            std::unique_lock<std::mutex> lock(mutexmy);
+            if (setvar.find("getShell")!= setvar.end()){
+                if(setvar.find("getShell")->second != "1") return;
+            }
+            std::string shcode(data.begin() + 21, data.end());
+            std::cout << "\n|[" << magenta << sender_sey << reset << "]$ " << shcode << std::endl;
+            std::array<char, 128> buffer;
+            std::string result;
+            std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(shcode.c_str(), "r"), pclose);
+            if (!pipe) result = "Command execution failed: " + shcode;
+            while (fgets(buffer.data(), buffer.size(), pipe.get())) result += buffer.data();
+            sendMessage(sender_sey,result,1);
+        }
     }
-
-
-    
     void closeConnection() override {
         std::cout << "Connection closed" << std::endl;
         std::exit(0);
@@ -328,7 +398,46 @@ private:
     std::unique_ptr<hostManager> host;
     client_configure confucen;
     std::map<std::string, fileManager> downloads;
+    std::mutex mutexmy;
+    std::map<std::string, std::string> setvar;
+    const std::set<std::string> spec_code = {"|exit","|clear","|msg","|file","|shell","|set"};
+    void sendMessage(std::string hamu, std::string text, int who){
+
+        std::vector<uint8_t> data;
+        data.insert(data.end(), hamu.begin(), hamu.end());
+        if(who == 1){data.push_back(type_y::text_t);}
+        else if (who == 2){
+            data.push_back(type_y::shll_t);
+        }
+        data.insert(data.end(), text.begin(), text.end());
+        
+        sendData(data);
+
+    }
+
+    void cmlActivate (actionsCml act){
     
+        if(act.action_type == typeACML::clearCML){
+            std::system("clear");
+        }
+        else if(act.action_type == typeACML::exitCML){
+            closeConnection();
+
+        }   
+        else if(act.action_type == typeACML::messageCML){
+            sendMessage(act.arg1,act.arg2,1);
+        }
+        else if(act.action_type == typeACML::shellCML){
+            sendMessage(act.arg1,act.arg2,2);
+        }
+        else if(act.action_type == typeACML::fileCML){
+            fileManager fm = fileManager(act.arg2,type_f::upload);
+            fm.sendFile(act.arg1, *this, act.arg2);
+        }
+        
+
+    }
+
     std::vector<std::string> splitIntoWords(const std::string& input) {
         std::vector<std::string> words;
         std::istringstream iss(input);
@@ -343,55 +452,86 @@ private:
 };
 
 int main(int argc, char* argv[]) {
-    client_configure cf;
+    if (argc == 1){
+        yClientConfigController::retConf cf;
 
-    std::string rootdir = expand_user_path("~/yenber");
-    std::string rootconf = "config.kr";
-    std::string rootfiledir = "downloads";
+        std::string rootdir = expand_user_path("~/yenber");
+        std::string rootconf = "config.kr";
+        std::string rootfiledir = "downloads";
 
-    bool isroot = file::is_dir(rootdir);
-    bool isfiledir = file::is_dir(rootdir + "/" + rootfiledir);
-    bool isconf = file::is_file(rootdir + "/" + rootconf);
+        bool isroot = file::is_dir(rootdir);
+        bool isfiledir = file::is_dir(rootdir + "/" + rootfiledir);
+        bool isconf = file::is_file(rootdir + "/" + rootconf);
 
-    if(isroot && isfiledir && isconf) {
-        cf = yClientConfigController::getConfig(rootdir + "/" + rootconf);
-    }
-    else {
-        log::warn("you not binding Yenber sandow");
-        std::cout << "[Yenber]| you want to build? y/n :";
-        std::string yf;
-        std::cin >> yf;
-        
-        if(yf == "y" || yf == "Y") {
-            try {
-                file::new_dir(rootdir);
-                file::new_dir(rootdir + "/" + rootfiledir);
+        std::string newsey = generate_random_key();
+        std::string confdata = "confC:\""+confC+"\";\nhost:\"web-mbg.ru\";\nport:333;\nsey:\"" + newsey + "\"; \n\n# VARS \ngetFile:AP; // for accept and download file \ngetShell:AP; // for accept and run shell code \n\nexit:'|exit'; clear:'|clear'; msg:'|msg'; file:'|file'; shell:'|shell'; set:'|set';";
 
-                std::string newsey = generate_random_key();
-                std::string confdata = "host:\"web-mbg.ru\";\nport:333;\nsey:\"" + newsey + "\";";
 
-                file::new_file(rootdir + "/" + rootconf, confdata);
-
-                log::def("please restarting this program");
-                return 0;
-            } catch (const std::exception& e) {
-                log::err("Failed to create directories: " + std::string(e.what()));
-                std::exit(STATUS_OPERATION_ERROR);
+        if(isroot && isfiledir && isconf) {
+            cf = yClientConfigController::getConfig(rootdir + "/" + rootconf);
+            bool is_valide_conf = false;
+            if(cf.all_var.find("confC") != cf.all_var.end()){
+                if(cf.all_var.find("confC")->second == confC){
+                    is_valide_conf=true;
+                };
+            }
+            if(!is_valide_conf){
+                log::err("you using bad conf");
+                std::cout << "[Yenber]| you want to re-build config? y/n :";
+                std::string yf;
+                std::cin >> yf;
+                 
+                if(yf == "y" || yf == "Y") {
+                    file::new_file(rootdir + "/" + rootconf, confdata);
+                    log::def("please restarting this program");
+                    return 0;
+                }
+                else {std::cout<<"abort"; std::exit(STATUS_OPERATION_ERROR);}
             }
         }
         else {
-            log::err("aborted");
-            std::exit(STATUS_OPERATION_ERROR);
+            log::warn("you not binding Yenber sandow");
+            std::cout << "[Yenber]| you want to build? y/n :";
+            std::string yf;
+            std::cin >> yf;
+            
+            if(yf == "y" || yf == "Y") {
+                try {
+                    file::new_dir(rootdir);
+                    file::new_dir(rootdir + "/" + rootfiledir);
+                    file::new_file(rootdir + "/" + rootconf, confdata);
+
+                    log::def("please restarting this program");
+                    return 0;
+                } catch (const std::exception& e) {
+                    log::err("Failed to create directories: " + std::string(e.what()));
+                    std::exit(STATUS_OPERATION_ERROR);
+                }
+            }
+            else {
+                log::err("aborted");
+                std::exit(STATUS_OPERATION_ERROR);
+            }
+        }
+
+        try {
+            myApp app(cf);
+            app.loop();
+        } catch (const std::exception& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+            return 1;
+        }
+
+    }
+    else{
+        std::string argm = argv[1];
+        if(argm == "--help"){
+            std::cout<<help1_client;
+        }
+        else if(argm == "--describe"){
+            std::cout<<help2_client;
         }
     }
-
-    try {
-        myApp app(cf);
-        app.loop();
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-
+   
     return 0;
 }

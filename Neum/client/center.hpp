@@ -119,6 +119,9 @@ private:
             log::err("Connection failed: " + std::string(strerror(errno)));
             return false;
         }
+        else{
+            log::good("Connection accepted"); 
+        }
         
         workojob = true;
         client_head_packet_raw chpr;

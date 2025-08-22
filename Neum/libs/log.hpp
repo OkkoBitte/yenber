@@ -1,6 +1,9 @@
 class log{
 
 public:
+    static void good(std::string text){
+        std::cout << "GOOD: "<< green<<text<<reset<<std::endl;
+    }
     static void def(std::string text){
         std::cout << "LOG: "<< text<<std::endl;
     }

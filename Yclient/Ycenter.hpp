@@ -1,6 +1,9 @@
 namespace yClientConfigController{
-
-    client_configure getConfig(std::string path){
+    struct retConf{
+        client_configure cc;
+        std::map<std::string,std::string> all_var;
+    };
+    retConf getConfig(std::string path){
         if(!file::is_file(path)){
             std::string errort = "not find file '" + path+"'";
             log::err(errort);
@@ -8,6 +11,7 @@ namespace yClientConfigController{
         }
         std::string file_data = file::read_file<std::string>(path);
         std::vector<vars> kvar = kconf(file_data, {});
+        retConf rf;
         client_configure retconf;
         bool servername = false;
         bool serverport = false;
@@ -31,7 +35,7 @@ namespace yClientConfigController{
                     std::exit(STATUS_OPERATION_ERROR);
                 }
             }
-            if(var.name == "port"){
+            else if(var.name == "port"){
                 if (var.valib.type == VSID::intV){
                     retconf.port = atoi(var.valib.value.c_str());
                     serverport = true;
@@ -42,7 +46,7 @@ namespace yClientConfigController{
                 }
             }
 
-            if(var.name == "sey"){
+            else if(var.name == "sey"){
                 char raw[20] = {0};
                 if(var.valib.value.size() == 20) {
                     memcpy(raw, var.valib.value.c_str(), 20);
@@ -55,6 +59,7 @@ namespace yClientConfigController{
                 
      
             }
+            rf.all_var[var.name]=var.valib.value;
         }      
         
         if(!servername){
@@ -69,7 +74,8 @@ namespace yClientConfigController{
             log::err("no find option in config 'sey'");
             esexit = true;
         }
-        return retconf;
+        rf.cc=retconf;
+        return rf;
     }
 
 }
