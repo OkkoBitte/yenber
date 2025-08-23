@@ -1,10 +1,10 @@
 #define NULL_STR ""
 
-#define VERSION_CODE 56
-#define VERSION_NAME_SERVER "0.1.12-release[backup-stable]"
-#define VERSION_NAME_CLIENT "0.1.12-release[backup-stable]"
+#define VERSION_CODE 57
+#define VERSION_NAME_SERVER "0.1.15-release[unordered]"
+#define VERSION_NAME_CLIENT "0.1.15-release[unordered]"
 
-#define DESCRIBE_VERSION_YENBER "0.1.1-debuge[inDev]"
+#define DESCRIBE_VERSION_YENBER "0.1.2-debuge[inDev]"
 
 #define STATUS_SYSTEM_OPERATION_ERROR -1
 #define STATUS_OPERATION_OK 0
@@ -18,8 +18,8 @@ static constexpr const char* FO__KRR__CONF       = "-1";
 uint8_t mazor_code = 0x01;
 std::string confC = "1";
 
-const std::string help1_server = "|[Neum:V][HELP] server config.krr   \n\n\tfor get more data --describe\n\tfor get help --help\n";
-std::string help2_server = "|[Neum:V][DESCRIBE] \n\n\tVersion Code "+std::to_string(VERSION_CODE)+"\n\tVersion Name "+VERSION_NAME_SERVER+"\n\tVersion App "+DESCRIBE_VERSION_YENBER+"\n\n More web-mbg.ru\n\n";
+const std::string help1_server = "|[Neum:S][HELP] server config.krr   \n\n\tfor get more data --describe\n\tfor get help --help\n";
+std::string help2_server = "|[Neum:S][DESCRIBE] \n\n\tVersion Code "+std::to_string(VERSION_CODE)+"\n\tVersion Name "+VERSION_NAME_SERVER+"\n\tVersion App "+DESCRIBE_VERSION_YENBER+"\n\n More web-mbg.ru\n\n";
 
 std::string help1_client = "|[Yenber][HELP] yenber\n\n\tfor get more data --describe\n\tfor get help --help\n";
 std::string help2_client = "|[Yenber][DESCRIBE]\n\n\tVersion Code "+std::to_string(VERSION_CODE)+"\n\tVersion Name "+VERSION_NAME_CLIENT+"\n\tVersion App "+DESCRIBE_VERSION_YENBER+"\n\n More web-mbg.ru\n\n";

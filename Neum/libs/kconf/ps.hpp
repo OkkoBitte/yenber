@@ -168,9 +168,7 @@ class kairrer_conf_tpr {
                 
             }
             else {
-                varlib.setName(vname);
-                varlib.valib.type  = nullV;
-                varlib.valib.value = NULL_STR;
+                log.fkr("lixtVAR","fo vanih hamu var '"+vname+ "' "+line_pin());
 
                 
             };

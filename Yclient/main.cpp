@@ -49,46 +49,45 @@ public:
         }
     }
     
-void getFile(uint64_t chunk_num, uint64_t chunks_total, std::vector<uint8_t> data) {
-    std::lock_guard<std::mutex> lock(file_mutex);
+    void getFile(std::string sey, uint64_t chunk_num, uint64_t chunks_total, std::vector<uint8_t> data) {
+        std::lock_guard<std::mutex> lock(file_mutex);
+        
     
-   
-    if (total_chunks == 0) {
-        total_chunks = chunks_total;
-        if (file_stream.is_open()) file_stream.close();
-        file_stream.open(expand_user_path("~/yenber/downloads/"+filename), std::ios::binary);
-        if (!file_stream) {
-            throw std::runtime_error("Failed to open file: " + filename);
+        if (total_chunks == 0) {
+            total_chunks = chunks_total;
+            if (file_stream.is_open()) file_stream.close();
+            file_stream.open(expand_user_path("~/yenber/downloads/"+filename), std::ios::binary);
+            if (!file_stream) {
+                throw std::runtime_error("Failed to open file: " + filename);
+            }
+            //std::cout << "Starting file transfer: " << filename        << " (" << total_chunks << " chunks)" << std::endl;
         }
-        std::cout << "Starting file transfer: " << filename 
-                 << " (" << total_chunks << " chunks)" << std::endl;
-    }
-    
-    else if (chunk_num == 1 && total_chunks != chunks_total) {
-        std::cerr << "Warning: chunk #1 has different total chunks count: " 
-                 << chunks_total << " vs " << total_chunks << std::endl;
-        total_chunks = std::max(total_chunks, chunks_total);
-    }
+        
+        else if (chunk_num == 1 && total_chunks != chunks_total) {
+            std::cerr << "Warning: chunk #1 has different total chunks count: " 
+                    << chunks_total << " vs " << total_chunks << std::endl;
+            total_chunks = std::max(total_chunks, chunks_total);
+        }
 
-    file_stream.write(reinterpret_cast<const char*>(data.data()), data.size());
-    fsr += data.size();
-    chunks_received++;
-    
-    int percent = 0;
-    if (total_chunks > 0) {
-        percent = (100 * chunks_received) / total_chunks;
+        file_stream.write(reinterpret_cast<const char*>(data.data()), data.size());
+        fsr += data.size();
+        chunks_received++;
+        
+        int percent = 0;
+        if (total_chunks > 0) {
+            percent = (100 * chunks_received) / total_chunks;
+        }
+        
+        //std::cout << "\rReceiving " << filename << ": " << chunks_received << "/" << total_chunks << " chunks (" << percent << "%)" << std::flush;
+        
+        if (chunks_received == total_chunks) {
+            file_stream.close();
+            // std::cout << "\nFile transfer complete: " << filename 
+            //         << " (" << fsr << " bytes)" << std::endl;
+            std::cout << "\n|[" << magenta << sey << reset << "]/ " << filename << std::endl;
+             
+        }
     }
-    
-    std::cout << "\rReceiving " << filename << ": " 
-             << chunks_received << "/" << total_chunks
-             << " chunks (" << percent << "%)" << std::flush;
-    
-    if (chunks_received == total_chunks) {
-        file_stream.close();
-        std::cout << "\nFile transfer complete: " << filename 
-                 << " (" << fsr << " bytes)" << std::endl;
-    }
-}
     void sendFile(const std::string& recipient_sey, clientManager& cm, const fs::path& filepath) {
     
         std::thread sendth([recipient_sey, &cm, filepath]() { 
@@ -151,15 +150,14 @@ void getFile(uint64_t chunk_num, uint64_t chunks_total, std::vector<uint8_t> dat
                 } else {
                     percent = 100;
                 }
-                std::cout << "\rSending " << filename << ": " 
-                        << current_chunk << "/" << total_chunks
-                        << " chunks (" << percent << "%)";
-            
-             
+                // std::cout << "\rSending " << filename << ": " 
+                //         << current_chunk << "/" << total_chunks
+                //         << " chunks (" << percent << "%)";
+      
            
             }
             
-            std::cout << "\nFile transfer complete: " << filename << std::endl;
+            //std::cout << "\nFile transfer complete: " << filename << std::endl;
         });
 
         sendth.detach();
@@ -185,6 +183,7 @@ public:
 
     void newCml() {
         std::cout << "|[" << cyan << std::string(confucen.sey.sey_main, 20) << reset << "]> ";
+       
     }
 
     void connected() override {
@@ -258,7 +257,8 @@ public:
                     std::cout << "File not found: " << filepath << std::endl;
                     continue;
                 }
-                std::cout<< "File "<<filepath<<" is exists!"<<std::endl;
+                
+                //std::cout<< "File "<<filepath<<" is exists!"<<std::endl;
 
                 action.action_type = typeACML::fileCML;
                 action.arg1 = words[1];
@@ -296,7 +296,7 @@ public:
             }
             else {
                 std::cout << "\n\nUnknown command: " << firecode << std::endl;
-                std::cout << "Available commands:\n\t|msg <sey> <text> -- send text\n\t|file <sey> <path> -- send file\n\t|exit -- quit\n\t|clear -- clear chat\n\t|set <link> <text> -- variables\n\t|shell <sey> <command> -- run command\n\n";
+                std::cout << "Available commands:\n\t|msg <sey> <text> -- send text\n\t|file <sey> <path> -- send file\n\t|shell <sey> <command> -- run command\n\t|exit -- quit\n\t|clear -- clear chat\n\t|set <link> <text> -- variables\n\n";
             }
             
             cmlActivate(action);
@@ -364,7 +364,7 @@ public:
                         std::forward_as_tuple(filename, type_f::download)
                     ).first;
                 }
-                it->second.getFile(current_chunk, total_chunks,std::vector<uint8_t>(file_data, file_data + data_size));
+                it->second.getFile(sender_sey,current_chunk, total_chunks,std::vector<uint8_t>(file_data, file_data + data_size));
                 
                 if (current_chunk == total_chunks) {
                     downloads.erase(filename);

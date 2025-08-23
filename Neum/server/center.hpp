@@ -326,7 +326,9 @@ bool hostManager::startSocketServer() {
         );
         
         hex_t client_hex = hex_t(new_client);
-            
+        auto ccd = manager->getClient(client_hex);   
+        if (ccd) manager->purgeClient(client_hex);
+        
         if (!manager->addClient(new_client)) {
             log::warn("Failed to add client to manager");
             close(clientSocket);
