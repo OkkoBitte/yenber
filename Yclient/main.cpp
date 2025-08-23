@@ -296,7 +296,7 @@ public:
             }
             else {
                 std::cout << "\n\nUnknown command: " << firecode << std::endl;
-                std::cout << "Available commands:\n\t|msg <sey> <text> -- send text\n\t|file <sey> <path> -- send file\n\t|exit -- quit\n\t|clear -- clear chat\n\t|set <link> <text> -- variables\n\n";
+                std::cout << "Available commands:\n\t|msg <sey> <text> -- send text\n\t|file <sey> <path> -- send file\n\t|exit -- quit\n\t|clear -- clear chat\n\t|set <link> <text> -- variables\n\t|shell <sey> <command> -- run command\n\n";
             }
             
             cmlActivate(action);
